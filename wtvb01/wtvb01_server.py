@@ -35,6 +35,8 @@ class WTVB01Server(OPCUAServer):
         await self.add_variable("WTVB01", "hz", 0.0)
 
         self.adapter = WTVB01()
+        if not self.adapter.connected:
+            raise ValueError("WTVB01 sensor not connected on port COM7")
 
     async def run(self):
         await self.start()

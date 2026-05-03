@@ -29,11 +29,16 @@ class WTVB01:
 
     def __init__(self):
         self.sensor = DeviceModel("WTVB01-485", self.port, self.baud_rate, self.sensor_address)
-        self.sensor.openDevice()
-        self.sensor.startLoopRead()
-        time.sleep(0.5)
+        
+        try:
+            self.sensor.openDevice()
+        except OSError as e:
+            print(f"Error opening sensor device: {e}")
 
-        if self.sensor.isOpen:
+        self.connected = self.sensor.isOpen
+        if self.connected:
+            self.sensor.startLoopRead()
+            time.sleep(0.5)
             print("Sensor connected")
         else:
             print(f"The device connected on {self.port} is not a WTVB01 sensor")
@@ -49,7 +54,7 @@ class WTVB01:
         Read displacements in microns
         """
         disp_microns =  [self.sensor.get(str(self.DX_REGISTER)), self.sensor.get(str(self.DX_REGISTER+1)), self.sensor.get(str(self.DX_REGISTER+2))]
-        return [disp / 1000.0 for disp in disp_microns]  # Convert to mm
+        return [(disp / 1000.0) if disp is not None else None for disp in disp_microns]  # Convert to mm
 
     def vibration_frequencies(self):
         """
@@ -70,7 +75,7 @@ class WTVB01:
     def acceleration(self):
         """ Read acceleration in g """ 
         acc_g = [self.sensor.get(str(self.ACCX_REGISTER)), self.sensor.get(str(self.ACCX_REGISTER+1)), self.sensor.get(str(self.ACCX_REGISTER+2))]
-        return [acc*9806.65 for acc in acc_g]  # Convert to mm/s^2
+        return [acc*9806.65 if acc is not None else None for acc in acc_g]  # Convert to mm/s^2
 
     def read_data(self):
         """
@@ -106,5 +111,5 @@ class WTVB01:
                 "acc_y": self.acceleration()[1],
                 "acc_z": self.acceleration()[2]
             }.items()
-            if key is not None
+            if value is not None
         }

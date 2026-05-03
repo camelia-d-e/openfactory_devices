@@ -384,7 +384,7 @@ class DustTrak:
         "Write data to CSV file"
         csv_data = data.copy()
 
-        file_path = os.path.join(self.current_dir, 'logs', f'{datetime.today().strftime('%Y-%m-%d')}.csv')
+        file_path = os.path.join(self.current_dir, 'logs', f"{datetime.today().strftime('%Y-%m-%d')}.csv")
 
         csv_data['timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
