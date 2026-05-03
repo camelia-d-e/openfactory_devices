@@ -91,7 +91,7 @@ class DustTrak:
                     pyautogui.click(task_bar_location, button='left', clicks=1)
                     return
         except  pyautogui.ImageNotFoundException:
-            print(f"Could not find the image at {task_bar_path}")
+            print(f"Could not find the image on screen at {task_bar_path}")
             self.is_dust_trak_app_open = False
 
         shortcut_path = os.path.join(self.current_dir, 'templates', 'dust_trak_shortcut.png')
