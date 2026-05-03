@@ -1,7 +1,9 @@
-from dust_trak.dust_trak_adapter import DustTrak
-import pytest # type: ignore
 import json
-from unittest.mock import patch, mock_open
+from unittest.mock import mock_open, patch
+
+import pytest  # type: ignore
+
+from dust_trak.dust_trak_adapter import DustTrak
 
 MOCK_CONFIG = {
     "data_export_type": "openfactory",
@@ -12,10 +14,12 @@ MOCK_CONFIG = {
 
 def make_adapter(mock_pyautogui, mock_pyshark, config=None):
     cfg = config or MOCK_CONFIG
-    with patch("builtins.open", mock_open(read_data=json.dumps(cfg))):
-        with patch("dust_trak.dust_trak_adapter.os.path.dirname", return_value="/fake/dir"):
-            with patch.object(DustTrak, "launch_dust_trak_monitoring"):  # prevent GUI calls
-                adapter = DustTrak()
+    with (
+        patch("builtins.open", mock_open(read_data=json.dumps(cfg))),
+        patch("dust_trak.dust_trak_adapter.os.path.dirname", return_value="/fake/dir"),
+        patch.object(DustTrak, "launch_dust_trak_monitoring"),
+    ):
+        adapter = DustTrak()
     return adapter
 
 
@@ -72,7 +76,7 @@ class TestDustTrakParseHexData:
     def test_parses_valid_hex_payload(self, mock_pyautogui, mock_pyshark):
         adapter = make_adapter(mock_pyautogui, mock_pyshark)
         # simulate dust_trak msg: ",1.0,2.0,3.0,4.0,"
-        raw = ",1.0,2.0,3.0,4.0,".encode("utf-8").hex()
+        raw = b",1.0,2.0,3.0,4.0,".hex()
         hex_payload = ":".join(raw[i:i+2] for i in range(0, len(raw), 2))
         result = adapter.parse_hex_data(hex_payload)
         assert result == ["1.0", "2.0", "3.0", "4.0"]

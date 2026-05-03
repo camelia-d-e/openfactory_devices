@@ -1,22 +1,23 @@
-import threading
-import os
-import time
-import csv
 import asyncio
-import pyshark
-import pyautogui
+import csv
 import json
+import os
+import threading
+import time
 from datetime import datetime
-from typing import Dict, List
 
-class DustTrak():
+import pyautogui
+import pyshark
+
+
+class DustTrak:
     "DustTrak device"
 
     def __init__(self):
         config_data = []
         self.current_dir = os.path.dirname(os.path.abspath(__file__))
         file_path = os.path.join(self.current_dir, 'config.json')
-        with open(file_path, 'r', encoding='utf-8') as file:
+        with open(file_path, encoding='utf-8') as file:
             config_data = json.load(file)
 
         self.data_export_type = config_data['data_export_type']
@@ -300,7 +301,7 @@ class DustTrak():
                     break
 
                 if hasattr(packet, 'tcp') and hasattr(packet.tcp, 'payload'):
-                    parsed_data: List[str] = self.parse_hex_data(packet.tcp.payload)
+                    parsed_data: list[str] = self.parse_hex_data(packet.tcp.payload)
                     if not self.is_empty_data(parsed_data) and len(parsed_data) >= 4:
                         if self.data_export_type == "csv":
                             self.write_to_csv({
@@ -343,18 +344,18 @@ class DustTrak():
             except RuntimeError as e:
                 print(f"Error closing event loop: {e}")
                 
-    def is_data_updated(self, new_data: List[float]) -> bool:
+    def is_data_updated(self, new_data: list[float]) -> bool:
         "Check if the new data is different from the latest data"   
         return not (self.latest_data['pm1_concentration'] == new_data[0] and
                 self.latest_data['pm2_5_concentration'] == new_data[1] and
                 self.latest_data['pm4_concentration'] == new_data[2] and
                 self.latest_data['pm10_concentration'] == new_data[3])
 
-    def read_data(self) -> Dict[str, float]:
+    def read_data(self) -> dict[str, float]:
         "Return the latest captured data"
         return self.latest_data.copy()
 
-    def parse_hex_data(self, raw_data: str) -> List[str]:
+    def parse_hex_data(self, raw_data: str) -> list[str]:
         "Decodes and parses raw hex data from TCP messages"
         try:
             bytes_obj = bytes.fromhex(raw_data.replace(":", ""))
@@ -367,7 +368,7 @@ class DustTrak():
             print(f"Error parsing hex data: {e}")
             return ['']
 
-    def convert_to_percent(self, concentrations: List[str]) -> List[float]:
+    def convert_to_percent(self, concentrations: list[str]) -> list[float]:
         "Convert concentration values to percentage"
         percentages = []
         for concentration in concentrations:
@@ -379,7 +380,7 @@ class DustTrak():
                 percentages.append(0.0)
         return percentages
     
-    def write_to_csv(self, data: Dict[str, str]) -> None:
+    def write_to_csv(self, data: dict[str, str]) -> None:
         "Write data to CSV file"
         csv_data = data.copy()
 
@@ -389,7 +390,7 @@ class DustTrak():
 
         with open(file=file_path, mode='a', newline='', encoding='utf-8') as csvfile:
             fieldnames = []
-            for key in csv_data.keys():
+            for key in csv_data:
                 fieldnames.append(key)
 
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)

@@ -1,7 +1,9 @@
 import pytest
 import pytest_asyncio
+
 from opcua_base.opcua_server import OPCUAServer
- 
+
+
 @pytest_asyncio.fixture(scope="session")
 async def server():
     s = OPCUAServer(endpoint="opc.tcp://localhost:14850")

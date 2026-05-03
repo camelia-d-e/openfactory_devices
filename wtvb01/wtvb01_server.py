@@ -1,6 +1,7 @@
+import asyncio
+
 from opcua_base.opcua_server import OPCUAServer
 from wtvb01.wtvb01_adapter import WTVB01
-import asyncio
 
 
 class WTVB01Server(OPCUAServer):

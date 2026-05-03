@@ -3,3 +3,4 @@ pyshark
 pyautogui
 pytest
 pyserial
+ruff

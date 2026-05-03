@@ -1,8 +1,9 @@
-from dust_trak.dust_trak_server import DustTrakServer
-import pytest
-import pytest_asyncio
 from unittest.mock import MagicMock, patch
 
+import pytest
+import pytest_asyncio
+
+from dust_trak.dust_trak_server import DustTrakServer
 
 ANY_VALID_DATA = {
     "pm1_concentration": 1.5,

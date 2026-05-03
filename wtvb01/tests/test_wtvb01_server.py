@@ -1,9 +1,9 @@
-import pytest
-import pytest_asyncio
 from unittest.mock import MagicMock, patch
 
-from wtvb01.wtvb01_server import WTVB01Server
+import pytest
+import pytest_asyncio
 
+from wtvb01.wtvb01_server import WTVB01Server
 
 ANY_VALID_DATA = {
     "temp": 25.0,

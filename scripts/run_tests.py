@@ -14,6 +14,11 @@ def find_test_dirs():
     ]
 
 def main():
+    lint = subprocess.run([sys.executable, "-m", "ruff", "check", str(ROOT), "--fix"], check=False)
+    if lint.returncode != 0:
+        print("Linting failed (fix errors before running tests)")
+        sys.exit(lint.returncode)
+
     test_dirs = find_test_dirs()
 
     if not test_dirs:

@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from wtvb01.wtvb01_adapter import WTVB01
 
@@ -44,7 +45,7 @@ class TestWTVB01ReadData:
     @patch("wtvb01.wtvb01_adapter.DeviceModel")
     def test_returns_empty_dict_on_io_error(self, mock_device_model):
         adapter, mock_sensor = make_mocked_adapter(mock_device_model)
-        mock_sensor.get.side_effect = IOError("Serial read failed")
+        mock_sensor.get.side_effect = OSError("Serial read failed")
         data = adapter.read_data()
         assert data == {}
 
@@ -57,7 +58,7 @@ class TestWTVB01ReadData:
     @patch("wtvb01.wtvb01_adapter.DeviceModel")
     def test_no_avail_key_on_error(self, mock_device_model):
         adapter, mock_sensor = make_mocked_adapter(mock_device_model)
-        mock_sensor.get.side_effect = IOError("Serial read failed")
+        mock_sensor.get.side_effect = OSError("Serial read failed")
         data = adapter.read_data()
         assert "avail" not in data
 
@@ -80,7 +81,7 @@ class TestWTVB01ReadData:
         """Fields with None MTConnect ID should not appear in output."""
         adapter, mock_sensor = make_mocked_adapter(mock_device_model)
         data = adapter.read_data()
-        assert None not in data.keys()
+        assert None not in data
 
 class TestWTVB01Measurements:
 

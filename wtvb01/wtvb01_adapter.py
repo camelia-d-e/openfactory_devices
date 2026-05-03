@@ -4,9 +4,11 @@ MTConnect Adapter for the WTVB01-485 vibration sensor from WitMotion
 Uses RS485 Modbus RTU for communication
 """
 import time
+
 from .device_model import DeviceModel
 
-class WTVB01():
+
+class WTVB01:
 
     # default factory configuration
     baud_rate = 9600
@@ -80,7 +82,7 @@ class WTVB01():
             freq = self.vibration_frequencies()
             velocity = self.velocity()
             angles = self.angles()
-        except IOError as e:
+        except OSError as e:
             print(f"Error reading data: {e}")
             return {}
             
@@ -97,9 +99,9 @@ class WTVB01():
                 "vx": velocity[0],
                 "vy": velocity[1],
                 "vz": velocity[2],
-                "ax": angles[0],
-                "ay": angles[1],
-                "az": angles[2],
+                "angle_x": angles[0],
+                "angle_y": angles[1],
+                "angle_z": angles[2],
                 "acc_x": self.acceleration()[0],
                 "acc_y": self.acceleration()[1],
                 "acc_z": self.acceleration()[2]

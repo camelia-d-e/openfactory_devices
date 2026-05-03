@@ -1,6 +1,7 @@
-from opcua_base.opcua_server import OPCUAServer
-from dust_trak.dust_trak_adapter import DustTrak
 import asyncio
+
+from dust_trak.dust_trak_adapter import DustTrak
+from opcua_base.opcua_server import OPCUAServer
 
 
 class DustTrakServer(OPCUAServer):
