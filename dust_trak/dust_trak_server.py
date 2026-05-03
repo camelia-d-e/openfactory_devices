@@ -7,9 +7,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from dust_trak.dust_trak_adapter import DustTrak
 from opcua_base.opcua_server import OPCUAServer
 
-from dust_trak.dust_trak_adapter import DustTrak
-from opcua_base.opcua_server import OPCUAServer
-
 
 class DustTrakServer(OPCUAServer):
     def __init__(self, endpoint="opc.tcp://localhost:4841"):
