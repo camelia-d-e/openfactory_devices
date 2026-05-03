@@ -1,0 +1,5 @@
+opcua
+pyshark
+pyautogui
+pytest
+pyserial
