@@ -86,6 +86,13 @@ class TestDustTrakServerPublishing:
         assert await server.get_value("DustTrak", "pm1_concentration") == 9.9
 
     @pytest.mark.asyncio
-    async def test_start_capture_called_on_start(self, server, mock_adapter):
-        """start_capture should be called during server startup."""
-        mock_adapter.start_capture.assert_called_once()
+    async def test_start_capture_not_called_in_virtual_mode(self, server, mock_adapter):
+        mock_adapter.start_capture.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_start_capture_called_in_real_mode(self, opcua_endpoint, mock_adapter):
+        with patch("dust_trak.dust_trak_server.DustTrak", return_value=mock_adapter):
+            s = DustTrakServer(endpoint=opcua_endpoint, use_virtual_device=False)
+            await s.start()
+            mock_adapter.start_capture.assert_called_once()
+            await s.stop()

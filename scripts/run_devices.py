@@ -16,11 +16,7 @@ SERVERS = {
 
 
 async def main(selected: list[str]):
-    servers = {
-        name: cls()
-        for name, cls in SERVERS.items()
-        if name in selected
-    }
+    servers = {name: cls() for name, cls in SERVERS.items() if name in selected}
 
     if not servers:
         print(f"No matching servers found. Available: {list(SERVERS.keys())}")
@@ -37,12 +33,18 @@ async def main(selected: list[str]):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run OPC-UA device servers")
+    parser = argparse.ArgumentParser(description="Run OPC-UA adapters")
     parser.add_argument(
         "servers",
         nargs="*",
         default=list(SERVERS.keys()),  # run all if none specified
         help=f"Servers to run. Available: {list(SERVERS.keys())}",
+    )
+
+    parser.add_argument(
+        "--virtual",
+        action="store_true",
+        help="Use virtual devices instead of real hardware",
     )
     args = parser.parse_args()
     asyncio.run(main(args.servers))

@@ -1,8 +1,8 @@
-from asyncua import Server
+from asyncua import Server, ua
 
 
 class OPCUAServer:
-    def __init__(self, endpoint="opc.tcp://localhost:4840", namespace="lab-usine"):
+    def __init__(self, endpoint="opc.tcp://0.0.0.0:4840", namespace="lab-usine"):
         self.endpoint = endpoint
         self.namespace = namespace
         self.server = None
@@ -16,6 +16,7 @@ class OPCUAServer:
         await self.server.init()
         self.server.set_endpoint(self.endpoint)
         self.server.set_server_name("LabUsine OPC UA Server")
+        self.server.set_security_policy([ua.SecurityPolicyType.NoSecurity])
         self.idx = await self.server.register_namespace(self.namespace)
         self.objects = self.server.get_objects_node()
 

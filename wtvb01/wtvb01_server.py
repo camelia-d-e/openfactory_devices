@@ -5,7 +5,7 @@ from wtvb01.wtvb01_adapter import WTVB01
 
 
 class WTVB01Server(OPCUAServer):
-    def __init__(self, endpoint="opc.tcp://localhost:4842"):
+    def __init__(self, endpoint="opc.tcp://0.0.0.0:4842"):
         super().__init__(endpoint=endpoint, namespace="lab-usine")
 
     async def start(self):

@@ -1,9 +1,11 @@
 import json
-from unittest.mock import mock_open, patch
+import threading
+from unittest.mock import MagicMock, mock_open, patch
 
-import pytest  # type: ignore
+import pytest
 
 from dust_trak.dust_trak_adapter import DustTrak
+from dust_trak.dust_trak_initializer import DustTrakInitializer
 
 MOCK_CONFIG = {
     "data_export_type": "openfactory",
@@ -12,183 +14,113 @@ MOCK_CONFIG = {
 }
 
 
-def make_adapter(mock_pyautogui, mock_pyshark, config=None):
-    cfg = config or MOCK_CONFIG
+@pytest.fixture
+def adapter():
     with (
-        patch("builtins.open", mock_open(read_data=json.dumps(cfg))),
+        patch("builtins.open", mock_open(read_data=json.dumps(MOCK_CONFIG))),
         patch("dust_trak.dust_trak_adapter.os.path.dirname", return_value="/fake/dir"),
-        patch.object(DustTrak, "launch_dust_trak_monitoring"),
+        patch.object(DustTrakInitializer, "launch_dust_trak_monitoring"),
     ):
-        adapter = DustTrak()
-    return adapter
+        return DustTrak()
 
 
-class TestDustTrakInit:
-
-    @patch("dust_trak.dust_trak_adapter.pyshark")
-    @patch("dust_trak.dust_trak_adapter.pyautogui")
-    def test_initialises_latest_data(self, mock_pyautogui, mock_pyshark):
-        adapter = make_adapter(mock_pyautogui, mock_pyshark)
-        assert adapter.latest_data["pm1_concentration"] == 0.0
-        assert adapter.latest_data["pm2_5_concentration"] == 0.0
-        assert adapter.latest_data["pm4_concentration"] == 0.0
-        assert adapter.latest_data["pm10_concentration"] == 0.0
-
-    @patch("dust_trak.dust_trak_adapter.pyshark")
-    @patch("dust_trak.dust_trak_adapter.pyautogui")
-    def test_sets_device_ip(self, mock_pyautogui, mock_pyshark):
-        adapter = make_adapter(mock_pyautogui, mock_pyshark)
-        assert adapter.device_ip == "169.254.66.117"
-
-    @patch("dust_trak.dust_trak_adapter.pyshark")
-    @patch("dust_trak.dust_trak_adapter.pyautogui")
-    def test_reads_config_number_of_readings(self, mock_pyautogui, mock_pyshark):
-        adapter = make_adapter(mock_pyautogui, mock_pyshark)
-        assert adapter.readings_average_num == MOCK_CONFIG["numberOfReadings"]
+@pytest.fixture
+def virtual_adapter():
+    with (
+        patch("builtins.open", mock_open(read_data=json.dumps(MOCK_CONFIG))),
+        patch("dust_trak.dust_trak_adapter.os.path.dirname", return_value="/fake/dir"),
+    ):
+        return DustTrak(virtual=True)
 
 
-class TestDustTrakReadData:
+class TestInit:
+    def test_latest_data_zeros(self, adapter):
+        assert adapter.latest_data == {
+            "pm1_concentration": 0.0,
+            "pm2_5_concentration": 0.0,
+            "pm4_concentration": 0.0,
+            "pm10_concentration": 0.0,
+        }
 
-    @patch("dust_trak.dust_trak_adapter.pyshark")
-    @patch("dust_trak.dust_trak_adapter.pyautogui")
-    def test_returns_copy_of_latest_data(self, mock_pyautogui, mock_pyshark):
-        adapter = make_adapter(mock_pyautogui, mock_pyshark)
-        data = adapter.read_data()
-        assert data is not adapter.latest_data
+    def test_device_ip(self, adapter):
+        assert adapter.device_ip == MOCK_CONFIG["device_ip"]
 
-    @patch("dust_trak.dust_trak_adapter.pyshark")
-    @patch("dust_trak.dust_trak_adapter.pyautogui")
-    def test_returns_all_concentration_keys(self, mock_pyautogui, mock_pyshark):
-        adapter = make_adapter(mock_pyautogui, mock_pyshark)
-        data = adapter.read_data()
-        assert set(data.keys()) == {
+    def test_number_of_readings(self, adapter):
+        assert adapter.initializer.readings_average_num == MOCK_CONFIG["numberOfReadings"]
+
+    def test_not_running(self, adapter):
+        assert adapter.running is False
+
+    def test_capture_thread_none(self, adapter):
+        assert adapter.capture_thread is None
+
+    def test_virtual_skips_monitoring(self, virtual_adapter):
+        assert virtual_adapter.virtual is True
+
+
+class TestReadDataVirtual:
+    def test_returns_copy(self, virtual_adapter):
+        assert virtual_adapter.read_data() is not virtual_adapter.latest_data
+
+    def test_returns_all_keys(self, virtual_adapter):
+        assert set(virtual_adapter.read_data().keys()) == {
             "pm1_concentration",
             "pm2_5_concentration",
             "pm4_concentration",
             "pm10_concentration",
         }
 
-
-class TestDustTrakParseHexData:
-
-    @patch("dust_trak.dust_trak_adapter.pyshark")
-    @patch("dust_trak.dust_trak_adapter.pyautogui")
-    def test_parses_valid_hex_payload(self, mock_pyautogui, mock_pyshark):
-        adapter = make_adapter(mock_pyautogui, mock_pyshark)
-        # simulate dust_trak msg: ",1.0,2.0,3.0,4.0,"
-        raw = b",1.0,2.0,3.0,4.0,".hex()
-        hex_payload = ":".join(raw[i:i+2] for i in range(0, len(raw), 2))
-        result = adapter.parse_hex_data(hex_payload)
-        assert result == ["1.0", "2.0", "3.0", "4.0"]
-
-    @patch("dust_trak.dust_trak_adapter.pyshark")
-    @patch("dust_trak.dust_trak_adapter.pyautogui")
-    def test_returns_empty_string_list_on_invalid_hex(self, mock_pyautogui, mock_pyshark):
-        adapter = make_adapter(mock_pyautogui, mock_pyshark)
-        result = adapter.parse_hex_data("zz:zz:zz")
-        assert result == [""]
+    def test_values_within_range(self, virtual_adapter):
+        for _ in range(10):
+            for v in virtual_adapter.read_data().values():
+                assert 0.0 <= v <= 0.5
 
 
-class TestDustTrakConvertToPercent:
-
-    @patch("dust_trak.dust_trak_adapter.pyshark")
-    @patch("dust_trak.dust_trak_adapter.pyautogui")
-    def test_converts_correctly(self, mock_pyautogui, mock_pyshark):
-        adapter = make_adapter(mock_pyautogui, mock_pyshark)
-        result = adapter.convert_to_percent(["1225000"])
-        assert pytest.approx(result[0], rel=1e-3) == 100.0
-
-    @patch("dust_trak.dust_trak_adapter.pyshark")
-    @patch("dust_trak.dust_trak_adapter.pyautogui")
-    def test_returns_zero_on_invalid_value(self, mock_pyautogui, mock_pyshark):
-        adapter = make_adapter(mock_pyautogui, mock_pyshark)
-        result = adapter.convert_to_percent(["not_a_number"])
-        assert result == [0.0]
-
-    @patch("dust_trak.dust_trak_adapter.pyshark")
-    @patch("dust_trak.dust_trak_adapter.pyautogui")
-    def test_converts_multiple_values(self, mock_pyautogui, mock_pyshark):
-        adapter = make_adapter(mock_pyautogui, mock_pyshark)
-        result = adapter.convert_to_percent(["0", "612500", "1225000", "306250"])
-        assert pytest.approx(result[0]) == 0.0
-        assert pytest.approx(result[1], rel=1e-3) == 50.0
-        assert pytest.approx(result[2], rel=1e-3) == 100.0
-        assert pytest.approx(result[3], rel=1e-3) == 25.0
-
-
-class TestDustTrakIsEmptyData:
-
-    @patch("dust_trak.dust_trak_adapter.pyshark")
-    @patch("dust_trak.dust_trak_adapter.pyautogui")
-    def test_all_zeros_is_empty(self, mock_pyautogui, mock_pyshark):
-        adapter = make_adapter(mock_pyautogui, mock_pyshark)
-        assert adapter.is_empty_data(["0.0", "0.0", "0.0", "0.0"]) is True
-
-    @patch("dust_trak.dust_trak_adapter.pyshark")
-    @patch("dust_trak.dust_trak_adapter.pyautogui")
-    def test_all_91_is_empty(self, mock_pyautogui, mock_pyshark):
-        """91.0 is a known sentinel value treated as empty."""
-        adapter = make_adapter(mock_pyautogui, mock_pyshark)
-        assert adapter.is_empty_data(["91.0", "91.0", "91.0", "91.0"]) is True
-
-    @patch("dust_trak.dust_trak_adapter.pyshark")
-    @patch("dust_trak.dust_trak_adapter.pyautogui")
-    def test_real_data_is_not_empty(self, mock_pyautogui, mock_pyshark):
-        adapter = make_adapter(mock_pyautogui, mock_pyshark)
-        assert adapter.is_empty_data(["1.5", "2.3", "0.8", "3.1"]) is False
-
-
-class TestDustTrakIsDataUpdated:
-
-    @patch("dust_trak.dust_trak_adapter.pyshark")
-    @patch("dust_trak.dust_trak_adapter.pyautogui")
-    def test_same_data_is_not_updated(self, mock_pyautogui, mock_pyshark):
-        adapter = make_adapter(mock_pyautogui, mock_pyshark)
-        adapter.latest_data = {
-            "pm1_concentration": 1.0,
-            "pm2_5_concentration": 2.0,
-            "pm4_concentration": 3.0,
-            "pm10_concentration": 4.0,
+class TestReadDataReal:
+    def test_returns_sniffer_data(self, adapter):
+        adapter.sniffer.latest_data = {
+            "pm1_concentration": 1.1,
+            "pm2_5_concentration": 2.2,
+            "pm4_concentration": 3.3,
+            "pm10_concentration": 4.4,
         }
-        assert adapter.is_data_updated([1.0, 2.0, 3.0, 4.0]) is False
+        assert adapter.read_data() == adapter.sniffer.latest_data
 
-    @patch("dust_trak.dust_trak_adapter.pyshark")
-    @patch("dust_trak.dust_trak_adapter.pyautogui")
-    def test_different_data_is_updated(self, mock_pyautogui, mock_pyshark):
-        adapter = make_adapter(mock_pyautogui, mock_pyshark)
-        adapter.latest_data = {
-            "pm1_concentration": 1.0,
-            "pm2_5_concentration": 2.0,
-            "pm4_concentration": 3.0,
-            "pm10_concentration": 4.0,
-        }
-        assert adapter.is_data_updated([1.0, 2.0, 3.0, 99.0]) is True
+    def test_returns_copy_not_reference(self, adapter):
+        assert adapter.read_data() is not adapter.sniffer.latest_data
 
-class TestDustTrakCapture:
+    def test_csv_written_when_export_type_csv(self, adapter):
+        adapter.data_export_type = "csv"
+        adapter.csv_logger.write_to_csv = MagicMock()
+        adapter.read_data()
+        adapter.csv_logger.write_to_csv.assert_called_once()
 
-    @patch("dust_trak.dust_trak_adapter.pyshark")
-    @patch("dust_trak.dust_trak_adapter.pyautogui")
-    def test_start_capture_sets_running_true(self, mock_pyautogui, mock_pyshark):
-        adapter = make_adapter(mock_pyautogui, mock_pyshark)
-        with patch.object(adapter, "_capture_loop"):
+    def test_csv_not_written_for_openfactory_type(self, adapter):
+        adapter.csv_logger.write_to_csv = MagicMock()
+        adapter.read_data()
+        adapter.csv_logger.write_to_csv.assert_not_called()
+
+
+class TestCapture:
+    def test_start_sets_running(self, adapter):
+        with patch.object(adapter.sniffer, "run_capture"):
             adapter.start_capture()
             assert adapter.running is True
 
-    @patch("dust_trak.dust_trak_adapter.pyshark")
-    @patch("dust_trak.dust_trak_adapter.pyautogui")
-    def test_start_capture_only_starts_once(self, mock_pyautogui, mock_pyshark):
-        adapter = make_adapter(mock_pyautogui, mock_pyshark)
-        with patch.object(adapter, "_capture_loop"):
+    def test_start_creates_thread(self, adapter):
+        with patch.object(adapter.sniffer, "run_capture"):
             adapter.start_capture()
-            thread1 = adapter.capture_thread
-            adapter.start_capture()  # second call should do nothing
-            assert adapter.capture_thread is thread1
+            assert isinstance(adapter.capture_thread, threading.Thread)
 
-    @patch("dust_trak.dust_trak_adapter.pyshark")
-    @patch("dust_trak.dust_trak_adapter.pyautogui")
-    def test_stop_capture_sets_running_false(self, mock_pyautogui, mock_pyshark):
-        adapter = make_adapter(mock_pyautogui, mock_pyshark)
-        with patch.object(adapter, "_capture_loop"):
+    def test_start_only_once(self, adapter):
+        with patch.object(adapter.sniffer, "run_capture"):
+            adapter.start_capture()
+            first_thread = adapter.capture_thread
+            adapter.start_capture()
+            assert adapter.capture_thread is first_thread
+
+    def test_stop_sets_running_false(self, adapter):
+        with patch.object(adapter.sniffer, "run_capture"):
             adapter.start_capture()
             adapter.stop_capture()
             assert adapter.running is False
