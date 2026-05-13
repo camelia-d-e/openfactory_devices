@@ -3,6 +3,7 @@ MTConnect Adapter for the WTVB01-485 vibration sensor from WitMotion
 
 Uses RS485 Modbus RTU for communication
 """
+import random
 import time
 
 from .device_model import DeviceModel
@@ -27,21 +28,23 @@ class WTVB01:
 
     __available__ = 1
 
-    def __init__(self):
-        self.sensor = DeviceModel("WTVB01-485", self.port, self.baud_rate, self.sensor_address)
+    def __init__(self, virtual=False):
+        self.virtual = virtual
+        if not self.virtual:
+            self.sensor = DeviceModel("WTVB01-485", self.port, self.baud_rate, self.sensor_address)
         
-        try:
-            self.sensor.openDevice()
-        except OSError as e:
-            print(f"Error opening sensor device: {e}")
+            try:
+                self.sensor.openDevice()
+            except OSError as e:
+                print(f"Error opening sensor device: {e}")
 
-        self.connected = self.sensor.isOpen
-        if self.connected:
-            self.sensor.startLoopRead()
-            time.sleep(0.5)
-            print("Sensor connected")
-        else:
-            print(f"The device connected on {self.port} is not a WTVB01 sensor")
+            self.connected = self.sensor.isOpen
+            if self.connected:
+                self.sensor.startLoopRead()
+                time.sleep(0.5)
+                print("Sensor connected")
+            else:
+                print(f"The device connected on {self.port} is not a WTVB01 sensor")
 
     def temperature(self):
         """
@@ -81,6 +84,26 @@ class WTVB01:
         """
         Read and return device data
         """
+        if self.virtual:
+            return {
+                "temp": random.uniform(20.0, 30.0),
+                "dx": random.uniform(0.0, 0.2),
+                "dy": random.uniform(0.0, 0.2),
+                "dz": random.uniform(0.0, 0.2),
+                "hx": random.uniform(5.0, 15.0),
+                "hy": random.uniform(5.0, 15.0),
+                "hz": random.uniform(5.0, 15.0),
+                "vx": random.uniform(0.0, 1.0),
+                "vy": random.uniform(0.0, 1.0),
+                "vz": random.uniform(0.0, 1.0),
+                "angle_x": random.uniform(0.0, 10.0),
+                "angle_y": random.uniform(0.0, 10.0),
+                "angle_z": random.uniform(0.0, 10.0),
+                "acc_x": random.uniform(9.8, 9.82),
+                "acc_y": random.uniform(9.8, 9.82),
+                "acc_z": random.uniform(9.8, 9.82)
+            }
+        
         try:
             temp = self.temperature()
             disp = self.displacements()

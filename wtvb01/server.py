@@ -5,8 +5,12 @@ from wtvb01.adapter import WTVB01
 
 
 class WTVB01Server(OPCUAServer):
-    def __init__(self, endpoint="opc.tcp://0.0.0.0:4842"):
+    def __init__(self, endpoint="opc.tcp://0.0.0.0:4842", use_virtual_device=True):
         super().__init__(endpoint=endpoint, namespace="lab-usine")
+        self.adapter = WTVB01(virtual=use_virtual_device)
+        if not use_virtual_device:
+            if not self.adapter.connected:
+                raise ValueError(f"WTVB01 sensor not connected on port {self.adapter.port}")
 
     async def start(self):
         await super().start()
@@ -34,9 +38,7 @@ class WTVB01Server(OPCUAServer):
         await self.add_variable("WTVB01", "hy", 0.0)
         await self.add_variable("WTVB01", "hz", 0.0)
 
-        self.adapter = WTVB01()
-        if not self.adapter.connected:
-            raise ValueError("WTVB01 sensor not connected on port COM7")
+       
 
     async def run(self):
         await self.start()
